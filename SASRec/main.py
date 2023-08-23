@@ -7,6 +7,9 @@ from tqdm import tqdm
 from util import *
 import pickle
 from multiprocessing import freeze_support
+import numpy as np
+from datetime import datetime
+import joblib
 
 def str2bool(s):
     if s not in {'False', 'True'}:
@@ -22,7 +25,7 @@ parser.add_argument('--lr', default=0.001, type=float)
 parser.add_argument('--maxlen', default=50, type=int)
 parser.add_argument('--hidden_units', default=50, type=int)
 parser.add_argument('--num_blocks', default=2, type=int)
-parser.add_argument('--num_epochs', default=20, type=int)
+parser.add_argument('--num_epochs', default=5, type=int)
 parser.add_argument('--num_heads', default=1, type=int)
 parser.add_argument('--time_span', default=256, type=int)
 parser.add_argument('--dropout_rate', default=0.2, type=float)
@@ -56,10 +59,10 @@ if __name__ == '__main__':
     sess.run(tf.global_variables_initializer())
 
     try:
-        relation_matrix = pickle.load(open('models/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'rb'))
+        relation_matrix = pickle.load(open('datasets/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'rb'))
     except:
         relation_matrix = Relation(user_train, usernum, args.maxlen, args.time_span)
-        pickle.dump(relation_matrix, open('models/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'wb'))
+        pickle.dump(relation_matrix, open('datasets/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'wb'))
 
     sampler = WarpSampler(user_train, usernum, itemnum, relation_matrix, batch_size=args.batch_size, maxlen=args.maxlen, n_workers=3)
     T = 0.0
@@ -71,7 +74,7 @@ if __name__ == '__main__':
                 auc, loss, _ = sess.run([model.auc, model.loss, model.train_op],
                                         {model.u: u, model.input_seq: seq, model.time_matrix: time_matrix ,model.pos: pos, model.neg: neg,
                                             model.is_training: True})
-            if epoch % 20 == 0:
+            if epoch % 5 == 0:
                 t1 = time.time() - t0
                 T += t1
                 print('Evaluating')
@@ -81,6 +84,18 @@ if __name__ == '__main__':
                 print('epoch:%d, time: %f(s), valid (NDCG@10: %.4f, HR@10: %.4f), test (NDCG@10: %.4f, HR@10: %.4f)' % (
                 epoch, T, t_valid[0], t_valid[1], t_test[0], t_test[1]))
                 t0 = time.time()
+            print(f"현재 epoch : {epoch}")
+        print("테스트")
+        # 추천 대상 영화 목록을 생성합니다
+        movies_df = load_movies('./dataset')
+        print(movies_df)
+        all_movie_ids = movies_df['movieId'].to_numpy()
+        print("왜 이게 출력이 안됄까..?1")
+        item_idx = np.setdiff1d(all_movie_ids, seq)
+        qwe = model.predict(sess, 1, seq, time_matrix, item_idx)
+        print("왜 이게 출력이 안됄까..?2")
+        print(f"예측값은 어떨까? : {qwe}")
+        joblib.dump(model, "./SASRec/SAS_model.joblib")
     except:
         sampler.close()
         exit(1)

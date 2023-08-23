@@ -6,7 +6,7 @@ l2_emb,5e-05
 lr,0.001
 maxlen,50
 num_blocks,2
-num_epochs,201
+num_epochs,5
 num_heads,1
 time_span,256
 train_dir,default

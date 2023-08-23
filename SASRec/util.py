@@ -5,8 +5,8 @@ import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 from multiprocessing import Process, Queue
-
-import numpy as np
+import os
+import pandas as pd
 def random_neq(l, r, s):
     t = np.random.randint(l, r)
     while t in s:
@@ -164,6 +164,7 @@ def data_partition(fname):
             u, i, timestamp = line.rstrip().split('::')
         u = int(u)
         i = int(i)
+        rating = int(rating)
         user_count[u]+=1
         item_count[i]+=1
     f.close()
@@ -175,6 +176,7 @@ def data_partition(fname):
             u, i, timestamp = line.rstrip().split('::')
         u = int(u)
         i = int(i)
+        rating = int(rating)
         timestamp = float(timestamp)
         if user_count[u]<5 or item_count[i]<5:
             continue
@@ -303,3 +305,8 @@ def evaluate_valid(model, dataset, args, sess):
             sys.stdout.flush()
 
     return NDCG / valid_user, HT / valid_user
+
+def load_movies(path):
+    COL_NAME = ['movieId','title','genres']
+    df = pd.read_csv(os.path.join(path,"movies.dat"),sep='::', header=None, engine='python', names=COL_NAME, encoding = 'ISO-8859-1' )
+    return df
