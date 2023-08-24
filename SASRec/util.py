@@ -7,6 +7,22 @@ from collections import defaultdict
 from multiprocessing import Process, Queue
 import os
 import pandas as pd
+
+def load_ratings(path):
+    COL_NAME = ['userId','movieId','rating','timestamp']
+    df = pd.read_csv(os.path.join(path,"ratings.dat"),sep='::', header=None, engine='python', names=COL_NAME)
+    return df
+
+def load_movies(path):
+    COL_NAME = ['movieId','title','genres']
+    df = pd.read_csv(os.path.join(path,"movies.dat"),sep='::', header=None, engine='python', names=COL_NAME, encoding = 'ISO-8859-1' )
+    return df
+
+def load_users(path):
+    COL_NAME = ['userId','gender','age','Occupation','zip_code']
+    df = pd.read_csv(os.path.join(path,"users.dat"),sep='::', header=None, engine='python', names=COL_NAME)
+    return df
+
 def random_neq(l, r, s):
     t = np.random.randint(l, r)
     while t in s:
@@ -199,6 +215,7 @@ def data_partition(fname):
             user_test[user] = []
             user_test[user].append(User[user][-1])
     print('Preparing done...')
+    print(usernum, itemnum, timenum)
     return [user_train, user_valid, user_test, usernum, itemnum, timenum]
 
 
@@ -240,7 +257,10 @@ def evaluate(model, dataset, args, sess):
             item_idx.append(t)
 
         time_matrix = computeRePos(time_seq, args.time_span)
-
+        print([u])
+        print([seq],seq.shape[0])
+        print([time_matrix],time_matrix.shape[0])
+        print(item_idx,len(item_idx))
         predictions = -model.predict(sess, [u], [seq], [time_matrix],item_idx)
         predictions = predictions[0]
 
@@ -305,8 +325,3 @@ def evaluate_valid(model, dataset, args, sess):
             sys.stdout.flush()
 
     return NDCG / valid_user, HT / valid_user
-
-def load_movies(path):
-    COL_NAME = ['movieId','title','genres']
-    df = pd.read_csv(os.path.join(path,"movies.dat"),sep='::', header=None, engine='python', names=COL_NAME, encoding = 'ISO-8859-1' )
-    return df

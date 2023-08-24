@@ -9,7 +9,6 @@ import pickle
 from multiprocessing import freeze_support
 import numpy as np
 from datetime import datetime
-import joblib
 
 def str2bool(s):
     if s not in {'False', 'True'}:
@@ -32,12 +31,20 @@ parser.add_argument('--dropout_rate', default=0.2, type=float)
 parser.add_argument('--l2_emb', default=0.00005, type=float)
 
 args = parser.parse_args()
+
 if __name__ == '__main__':
     freeze_support()
 
-    if not os.path.isdir(args.dataset + '_' + args.train_dir):
-        os.makedirs(args.dataset + '_' + args.train_dir)
-    with open(os.path.join(args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as f:
+    if not os.path.isdir("SASRec/checkpoints"):
+        os.makedirs("SASRec/checkpoints")
+
+    if not os.path.isdir(os.path.join("./SASRec/", args.dataset + '_' + args.train_dir)):
+        os.makedirs(os.path.join("./SASRec/", args.dataset + '_' + args.train_dir))
+
+    if not os.path.isdir("SASRec/matrix"):
+        os.makedirs("SASRec/matrix")
+
+    with open(os.path.join("./SASRec/",args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as f:
         f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
     f.close()
 
@@ -57,12 +64,14 @@ if __name__ == '__main__':
     config.allow_soft_placement = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
+    
+    saver = tf.train.Saver()
 
     try:
-        relation_matrix = pickle.load(open('datasets/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'rb'))
+        relation_matrix = pickle.load(open('./SASRec/matrix/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'rb'))
     except:
         relation_matrix = Relation(user_train, usernum, args.maxlen, args.time_span)
-        pickle.dump(relation_matrix, open('datasets/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'wb'))
+        pickle.dump(relation_matrix, open('./SASRec/matrix/relation_matrix_%s_%d_%d.pickle' % (args.dataset, args.maxlen, args.time_span), 'wb'))
 
     sampler = WarpSampler(user_train, usernum, itemnum, relation_matrix, batch_size=args.batch_size, maxlen=args.maxlen, n_workers=3)
     T = 0.0
@@ -74,6 +83,8 @@ if __name__ == '__main__':
                 auc, loss, _ = sess.run([model.auc, model.loss, model.train_op],
                                         {model.u: u, model.input_seq: seq, model.time_matrix: time_matrix ,model.pos: pos, model.neg: neg,
                                             model.is_training: True})
+                print("---------------------------")
+                print(u, seq, time_seq, time_matrix)
             if epoch % 5 == 0:
                 t1 = time.time() - t0
                 T += t1
@@ -84,18 +95,11 @@ if __name__ == '__main__':
                 print('epoch:%d, time: %f(s), valid (NDCG@10: %.4f, HR@10: %.4f), test (NDCG@10: %.4f, HR@10: %.4f)' % (
                 epoch, T, t_valid[0], t_valid[1], t_test[0], t_test[1]))
                 t0 = time.time()
+            if epoch == args.num_epochs:  # 최종 에포크에서만 체크포인트 저장
+                save_path = saver.save(sess, "./SASRec/checkpoints/model.ckpt")
+                print(f"Model saved in path: {save_path}")
+
             print(f"현재 epoch : {epoch}")
-        print("테스트")
-        # 추천 대상 영화 목록을 생성합니다
-        movies_df = load_movies('./dataset')
-        print(movies_df)
-        all_movie_ids = movies_df['movieId'].to_numpy()
-        print("왜 이게 출력이 안됄까..?1")
-        item_idx = np.setdiff1d(all_movie_ids, seq)
-        qwe = model.predict(sess, 1, seq, time_matrix, item_idx)
-        print("왜 이게 출력이 안됄까..?2")
-        print(f"예측값은 어떨까? : {qwe}")
-        joblib.dump(model, "./SASRec/SAS_model.joblib")
     except:
         sampler.close()
         exit(1)
