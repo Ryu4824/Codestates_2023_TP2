@@ -128,6 +128,7 @@ def cleanAndsort(User, time_map):
         User_filted[user] = items
         for item in items:
             item_set.add(item[0])
+    print(len(item_set))
     user_map = dict()
     item_map = dict()
     for u, user in enumerate(user_set):

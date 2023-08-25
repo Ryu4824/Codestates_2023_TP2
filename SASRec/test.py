@@ -34,7 +34,7 @@ if __name__ == '__main__':
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     config.allow_soft_placement = True
-
+    
     with tf.Session(config=config) as sess:
         # Create a saver object
         saver = tf.train.Saver()
@@ -45,24 +45,44 @@ if __name__ == '__main__':
             print("Model restored from the checkpoint.")
 
             # Example data loading and prediction
-            userId = 1
-            #해당 유저의 영화 시청 기록 why? : 길이 50으로 재한되서 나머지 시청 기록이 잘림
-            seq = np.array(ratings_df[ratings_df['userId'] == userId]['movieId'].to_list())[-args.maxlen:]
-            watch_times = np.array(ratings_df[ratings_df['userId'] == userId]['timestamp'].to_list())[-args.maxlen:]
-            time_matrix = computeRePos(watch_times, args.time_span)[-args.maxlen:]  # 수정된 부분
+            userId = 4
+            # 사용자의 영화 시청 기록을 가져옵니다.
+            user_movie_history = ratings_df[ratings_df['userId'] == userId]
+
+            # 영화 시청 시간 순으로 정렬합니다.
+            user_movie_history = user_movie_history.sort_values(by='timestamp', ascending=True)  # 시간순으로 정렬
+
+            # 최근 50개의 영화를 선택하고, 뒤쪽에 0을 패딩합니다.
+            if len(user_movie_history) < args.maxlen:
+                padding = [0] * (args.maxlen - len(user_movie_history))
+                seq = padding + user_movie_history['movieId'].tolist()
+                watch_times = padding + user_movie_history['timestamp'].tolist()
+            else:
+                recent_movie_history = user_movie_history.tail(args.maxlen)
+                seq = recent_movie_history['movieId'].tolist()
+                watch_times = recent_movie_history['timestamp'].tolist()
+
+            # 시퀀스와 시청 시간을 numpy 배열로 변환합니다.
+            seq = np.array(seq)
+            watch_times = np.array(watch_times)
+
+            # 시청 시간을 이용하여 time_matrix 생성
+            time_matrix = computeRePos(watch_times, args.time_span)
+            time_matrix = time_matrix[-args.maxlen:]
+
+            # time_matrix에 대한 패딩 처리
+            if len(time_matrix) < args.maxlen:
+                padding = np.zeros((args.maxlen - len(time_matrix), args.maxlen))
+                time_matrix = np.concatenate((padding, time_matrix), axis=0)
             
             all_movie_ids = ratings_df['movieId'].unique()  # 중복 없는 영화 아이디만 선택
             #ratings데이터에 movieId 값은 중복을 포함해서 1000209개가 있는데
             #어떻게 데이터를 제외했는지 모름(단순히 중복을 제외는 아닌듯함 중복만 제외면 3706개이기때문)
             #현재 movieId가 3416(itemnum)까지만 가능
             #이러면 다른 영화를 추천에 제한됨
-            valid_movie_ids = all_movie_ids[all_movie_ids <= itemnum]
-
-            item_diff = np.setdiff1d(valid_movie_ids, seq)
-
-            # 랜덤하게 101개 선택
-            # 해당 유저의 시청 기록을 제외한 모든 movieId의 목록에서 추천을 해주고 싶은데 101개로 제한됨..
-            item_idx = np.random.choice(item_diff, size=101, replace=False)
+            
+            item_idx = all_movie_ids
+            print(all_movie_ids)
             print([userId])
             print("--------------------------------")
             print([seq],seq.shape)

@@ -52,7 +52,7 @@ class KNN():
         for m in movie_list:
             m_vector += cbf_data[m]
         
-        #예측    
+        #예측
         return self.model.kneighbors(m_vector.reshape((1,-1)), n_neighbors=n)[1][0]
 
 def train(movies_df=None, vector_size=100, pretrained = 'glove-twitter-100'):
