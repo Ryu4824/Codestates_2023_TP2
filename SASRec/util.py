@@ -128,7 +128,7 @@ def cleanAndsort(User, time_map):
         User_filted[user] = items
         for item in items:
             item_set.add(item[0])
-    print(len(item_set))
+    item_idx = list(item_set)
     user_map = dict()
     item_map = dict()
     for u, user in enumerate(user_set):
@@ -158,7 +158,7 @@ def cleanAndsort(User, time_map):
         User_res[user] = list(map(lambda x: [x[0], int(round((x[1]-time_min)/time_scale)+1)], items))
         time_max.add(max(set(map(lambda x: x[1], User_res[user]))))
 
-    return User_res, len(user_set), len(item_set), max(time_max)
+    return User_res, len(user_set), len(item_set), max(time_max),item_idx
 
 def data_partition(fname):
     usernum = 0
@@ -193,15 +193,13 @@ def data_partition(fname):
             u, i, timestamp = line.rstrip().split('::')
         u = int(u)
         i = int(i)
-        rating = int(rating)
+        rating = int(rating) 
         timestamp = float(timestamp)
-        if user_count[u]<5 or item_count[i]<5:
-            continue
         time_set.add(timestamp)
         User[u].append([i, timestamp])
     f.close()
     time_map = timeSlice(time_set)
-    User, usernum, itemnum, timenum = cleanAndsort(User, time_map)
+    User, usernum, itemnum, timenum,item_idx = cleanAndsort(User, time_map)
 
     for user in User:
         nfeedback = len(User[user])
@@ -216,12 +214,11 @@ def data_partition(fname):
             user_test[user] = []
             user_test[user].append(User[user][-1])
     print('Preparing done...')
-    print(usernum, itemnum, timenum)
-    return [user_train, user_valid, user_test, usernum, itemnum, timenum]
+    return [user_train, user_valid, user_test, usernum, itemnum, timenum,item_idx]
 
 
 def evaluate(model, dataset, args, sess):
-    [train, valid, test, usernum, itemnum, timenum] = copy.deepcopy(dataset)
+    [train, valid, test, usernum, itemnum, timenum,item_idx] = copy.deepcopy(dataset)
 
     NDCG = 0.0
     HT = 0.0
@@ -252,16 +249,12 @@ def evaluate(model, dataset, args, sess):
         rated.add(test[u][0][0])
         rated.add(0)
         item_idx = [test[u][0][0]]
-        for _ in range(100):
+        for _ in range(itemnum-1):
             t = np.random.randint(1, itemnum + 1)
             while t in rated: t = np.random.randint(1, itemnum + 1)
             item_idx.append(t)
 
         time_matrix = computeRePos(time_seq, args.time_span)
-        print([u])
-        print([seq],seq.shape[0])
-        print([time_matrix],time_matrix.shape[0])
-        print(item_idx,len(item_idx))
         predictions = -model.predict(sess, [u], [seq], [time_matrix],item_idx)
         predictions = predictions[0]
 
@@ -280,7 +273,7 @@ def evaluate(model, dataset, args, sess):
 
 
 def evaluate_valid(model, dataset, args, sess):
-    [train, valid, test, usernum, itemnum, timenum] = copy.deepcopy(dataset)
+    [train, valid, test, usernum, itemnum, timenum,item_idx] = copy.deepcopy(dataset)
 
     NDCG = 0.0
     valid_user = 0.0
@@ -305,7 +298,7 @@ def evaluate_valid(model, dataset, args, sess):
         rated.add(valid[u][0][0])
         rated.add(0)
         item_idx = [valid[u][0][0]]
-        for _ in range(100):
+        for _ in range(itemnum-1):
             t = np.random.randint(1, itemnum + 1)
             while t in rated: t = np.random.randint(1, itemnum + 1)
             item_idx.append(t)

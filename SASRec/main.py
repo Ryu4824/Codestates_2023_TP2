@@ -24,7 +24,7 @@ parser.add_argument('--lr', default=0.001, type=float)
 parser.add_argument('--maxlen', default=50, type=int)
 parser.add_argument('--hidden_units', default=50, type=int)
 parser.add_argument('--num_blocks', default=2, type=int)
-parser.add_argument('--num_epochs', default=5, type=int)
+parser.add_argument('--num_epochs', default=200, type=int)
 parser.add_argument('--num_heads', default=1, type=int)
 parser.add_argument('--time_span', default=256, type=int)
 parser.add_argument('--dropout_rate', default=0.2, type=float)
@@ -49,8 +49,8 @@ if __name__ == '__main__':
     f.close()
 
     dataset = data_partition(args.dataset)
-    [user_train, user_valid, user_test, usernum, itemnum, timenum] = dataset
-
+    [user_train, user_valid, user_test, usernum, itemnum, timenum,item_idx] = dataset
+    
     model = Model(usernum, itemnum, timenum, args)
     print('User: %d, Item: %d:, Timenum: %d' % (usernum, itemnum, timenum))
     num_batch = int(len(user_train) / args.batch_size)
@@ -83,9 +83,7 @@ if __name__ == '__main__':
                 auc, loss, _ = sess.run([model.auc, model.loss, model.train_op],
                                         {model.u: u, model.input_seq: seq, model.time_matrix: time_matrix ,model.pos: pos, model.neg: neg,
                                             model.is_training: True})
-                print("---------------------------")
-                print(u, seq, time_seq, time_matrix)
-            if epoch % 5 == 0:
+            if epoch % 20 == 0:
                 t1 = time.time() - t0
                 T += t1
                 print('Evaluating')
