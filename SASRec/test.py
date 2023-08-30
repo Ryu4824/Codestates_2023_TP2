@@ -60,14 +60,15 @@ if __name__ == '__main__':
             # 최근 50개의 영화를 선택하고, 뒤쪽에 0을 패딩합니다.
             if len(user_movie_history) < args.maxlen:
                 padding = [0] * (args.maxlen - len(user_movie_history))
-                seq = padding + user_movie_history['movieId'].tolist()
+                encoded_seq = padding + df[df['item_idx'].isin(user_movie_history['movieId'])]['encoded_item_idx'].tolist()
                 watch_times = padding + user_movie_history['timestamp'].tolist()
             else:
                 recent_movie_history = user_movie_history.tail(args.maxlen)
-                seq = recent_movie_history['movieId'].tolist()
+                encoded_seq = df[df['item_idx'].isin(recent_movie_history['movieId'])]['encoded_item_idx'].tolist()
                 watch_times = recent_movie_history['timestamp'].tolist()
+
             # 시퀀스와 시청 시간을 numpy 배열로 변환합니다.
-            seq = np.array(seq)
+            seq = np.array(encoded_seq)
             watch_times = np.array(watch_times)
             # 시청 시간을 이용하여 time_matrix 생성
             time_matrix = computeRePos(watch_times, args.time_span)
@@ -91,12 +92,15 @@ if __name__ == '__main__':
             print("--------------------------------")
 
             predictions = model.predict(sess, [userId], [seq], [time_matrix],item_idx)
-            # predictions = sess.run()
-            print(f"예측값은?{predictions}")
+            # 예측값으로부터 영화 인덱스 추출
+            indices = np.argsort(predictions[0])[::-1]
 
-            # 예측값으로부터 상위 10개 영화 인덱스 추출
-            top_10_indices = np.argsort(predictions)[0][-10:][::-1]
+            # 이미 시청한 영화 제외
+            user_movie_history_ids = user_movie_history['movieId'].tolist()
+            top_10_indices = [idx for idx in indices if df.loc[idx, 'item_idx'] not in user_movie_history_ids]
 
+            # 상위 10개 영화 인덱스 추출 (제외한 후)
+            top_10_indices = top_10_indices[:10]
             # 상위 10개 영화 인덱스에 해당하는 예측값
             top_10_predictions = predictions[0][top_10_indices]
             
@@ -104,8 +108,8 @@ if __name__ == '__main__':
             for idx in top_10_indices:
                 item_idx_value = df.loc[idx, 'item_idx']
                 title = movies_df[movies_df['movieId'] == int(item_idx_value)]['title'].item()
+                genres = movies_df[movies_df['movieId'] == int(item_idx_value)]['genres'].item()
                 prediction = predictions[0][idx]
-                print(f"영화 ID : {item_idx_value}, 영화 제목: {title}, 예측 평점: {prediction}")
-
+                print(f"영화 ID : {item_idx_value}, 영화 제목: {title}, 영화 장르: {genres} 예측 평점: {prediction}")
         except Exception as e:
             print(f"Error restoring from the checkpoint. Error: {e}")

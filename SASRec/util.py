@@ -249,7 +249,7 @@ def evaluate(model, dataset, args, sess):
         rated.add(test[u][0][0])
         rated.add(0)
         item_idx = [test[u][0][0]]
-        for _ in range(itemnum-1):
+        for _ in range(100):
             t = np.random.randint(1, itemnum + 1)
             while t in rated: t = np.random.randint(1, itemnum + 1)
             item_idx.append(t)
@@ -298,7 +298,7 @@ def evaluate_valid(model, dataset, args, sess):
         rated.add(valid[u][0][0])
         rated.add(0)
         item_idx = [valid[u][0][0]]
-        for _ in range(itemnum-1):
+        for _ in range(100):
             t = np.random.randint(1, itemnum + 1)
             while t in rated: t = np.random.randint(1, itemnum + 1)
             item_idx.append(t)
