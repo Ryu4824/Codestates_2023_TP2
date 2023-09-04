@@ -4,12 +4,21 @@ import numpy as np
 
 ratings_df = load_ratings('datasets')
 
+# 평점을 0과 1로 변환하는 함수 정의
+def transform_ratings(rating):
+    if rating <= 3:
+        return 0  # 3 이하는 부정으로 처리, 0으로 변환
+    else:
+        return 1  # 4와 5는 긍정으로 처리, 1로 변환
+
+ratings_df['binary_rating'] = ratings_df['rating'].apply(transform_ratings)
+
 def popular(top=5):
     # 아이템별 리뷰 수 계산
     item_review_counts = ratings_df['movieId'].value_counts()
 
     # 아이템별 평균 평점 계산
-    item_avg_ratings = ratings_df.groupby('movieId')['rating'].mean()
+    item_avg_ratings = ratings_df.groupby('movieId')['binary_rating'].mean()
 
     # 스코어 계산 함수 정의
     def calculate_score(average_rating, review_count):

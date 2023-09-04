@@ -77,7 +77,6 @@ if __name__ == '__main__':
             if len(time_matrix) < args.maxlen:
                 padding = np.zeros((args.maxlen - len(time_matrix), args.maxlen))
                 time_matrix = np.concatenate((padding, time_matrix), axis=0)
-            # 랜덤하게 101개 선택
             #이러면 다른 영화를 추천에 제한됨
             
             #item_idx = all_movie_ids
@@ -110,6 +109,6 @@ if __name__ == '__main__':
                 title = movies_df[movies_df['movieId'] == int(item_idx_value)]['title'].item()
                 genres = movies_df[movies_df['movieId'] == int(item_idx_value)]['genres'].item()
                 prediction = predictions[0][idx]
-                print(f"영화 ID : {item_idx_value}, 영화 제목: {title}, 영화 장르: {genres} 예측 평점: {prediction}")
+                print(f"Title: {title}, Genres: {genres} Predicted: {prediction}")
         except Exception as e:
             print(f"Error restoring from the checkpoint. Error: {e}")

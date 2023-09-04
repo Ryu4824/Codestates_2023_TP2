@@ -217,6 +217,60 @@ def data_partition(fname):
     return [user_train, user_valid, user_test, usernum, itemnum, timenum,item_idx]
 
 
+def evaluate_train(model, dataset, args, sess):
+    [train, valid, test, usernum, itemnum, timenum,item_idx] = copy.deepcopy(dataset)
+
+    NDCG = 0.0
+    HT = 0.0
+    valid_user = 0.0
+
+    if usernum>10000:
+        users = random.sample(range(1, usernum + 1), 10000)
+    else:
+        users = range(1, usernum + 1)
+    for u in users:
+
+        if len(train[u]) < 1 or len(test[u]) < 1: continue
+
+        seq = np.zeros([args.maxlen], dtype=np.int32)
+        time_seq = np.zeros([args.maxlen], dtype=np.int32)
+        idx = args.maxlen - 1
+        
+        seq[idx] = valid[u][0][0]
+        time_seq[idx] = valid[u][0][1]
+        idx -= 1
+        for i in reversed(train[u]):
+            seq[idx] = i[0]
+            time_seq[idx] = i[1]
+            idx -= 1
+            if idx == -1: break
+        rated = set(map(lambda x: x[0],train[u]))
+        rated.add(valid[u][0][0])
+        rated.add(train[u][0][0])
+        rated.add(0)
+        item_idx = [train[u][0][0]]
+        for _ in range(100):
+            t = np.random.randint(1, itemnum + 1)
+            while t in rated: t = np.random.randint(1, itemnum + 1)
+            item_idx.append(t)
+
+        time_matrix = computeRePos(time_seq, args.time_span)
+        predictions = -model.predict(sess, [u], [seq], [time_matrix],item_idx)
+        predictions = predictions[0]
+
+        rank = predictions.argsort().argsort()[0]
+
+        valid_user += 1
+
+        if rank < 10:
+            NDCG += 1 / np.log2(rank + 2)
+            HT += 1
+        if valid_user % 100 == 0:
+            print('.',end='')
+            sys.stdout.flush()
+
+    return NDCG / valid_user, HT / valid_user
+
 def evaluate(model, dataset, args, sess):
     [train, valid, test, usernum, itemnum, timenum,item_idx] = copy.deepcopy(dataset)
 

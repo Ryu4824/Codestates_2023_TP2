@@ -87,11 +87,12 @@ if __name__ == '__main__':
                 t1 = time.time() - t0
                 T += t1
                 print('Evaluating')
+                t_train = evaluate_train(model, dataset, args, sess)
                 t_test = evaluate(model, dataset, args, sess)
                 t_valid = evaluate_valid(model, dataset, args, sess)
                 print('')
-                print('epoch:%d, time: %f(s), valid (NDCG@10: %.4f, HR@10: %.4f), test (NDCG@10: %.4f, HR@10: %.4f)' % (
-                epoch, T, t_valid[0], t_valid[1], t_test[0], t_test[1]))
+                print('epoch:%d, time: %f(s), valid (NDCG@10: %.4f, HR@10: %.4f), test (NDCG@10: %.4f, HR@10: %.4f), train (NDCG@10: %.4f, HR@10: %.4f)' % (
+                epoch, T, t_valid[0], t_valid[1], t_test[0], t_test[1], t_train[0],t_train[1]))
                 t0 = time.time()
             if epoch == args.num_epochs:  # 최종 에포크에서만 체크포인트 저장
                 save_path = saver.save(sess, "./SASRec/checkpoints/model.ckpt")
